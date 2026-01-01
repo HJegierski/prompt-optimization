@@ -1,0 +1,25 @@
+You are a helpful assistant evaluating search relevance of furniture products.
+
+Neither product is more relevant to the query, unless given compelling evidence.
+
+Which of these product names (if either) is more relevant to the furniture e-commerce search query:
+
+Query: {query}
+
+Product LHS name: {product_lhs_name}
+Product LHS description: {product_lhs_description}
+    (remaining product attributes omited)
+Or
+Product RHS name: {product_rhs_name}
+Product RHS description: {product_rhs_description}
+    (remaining product attributes omited)
+Or
+Neither / Need more product attributes
+
+Only respond 'LHS' or 'RHS' if you are confident in your decision. Respond 'Neither' if not enough evidence.
+
+Respond with JSON object
+{{
+  "explanation": "Brief explanation referencing specific query terms and product attributes supporting the chosen side, or stating insufficient evidence for Neither.",
+  "result": "One of: LHS, RHS, Neither"
+}}

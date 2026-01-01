@@ -1,0 +1,99 @@
+# 🧭 Prompt Optimization for Product Relevance
+
+This repository evaluates different ways to **optimize prompts** for product relevance ranking tasks, using the **WANDS dataset** from Wayfair.  
+It includes both **manual**, **LLM-based**, and **DSPy-based** optimization pipelines — and a unified evaluation framework to compare them.
+
+---
+
+## 🚀 Project Overview
+
+The repository compares three prompt-generation strategies:
+
+| Prompt                 | Description | Optimizer |
+|:--------------------|:--|:--|
+| 🧠 **brain_prompt** | Manually written baseline | Human |
+| 🤖 **llm_prompt**   | Rewritten automatically by a small LLM | `LLMOptimizer` |
+| 🧬 **gepa_prompt**  | Evolved automatically via feedback and reflection | `DSPyOptimizer` (GEPA) |
+
+---
+
+## 🧪 Evaluation Protocol
+
+Each test presents a **search query** and two **candidate products (LHS, RHS)** from the WANDS dataset.  
+The model decides which product better matches the query - `"LHS"`, `"RHS"`, or `"Neither"`.
+
+**Metrics**
+
+| Metric | Meaning |
+|:--|:--|
+| **Overall Agreement** | Match rate with human labels |
+| **Accuracy (human-pref)** | Accuracy when human label isn’t “Neither” |
+| **Coverage** | Share of cases where model makes a decision |
+| **Selective Precision / Recall** | Precision and recall when model commits |
+
+**Setup**
+- 100 sampled query–product pairs  
+- Pydantic-based structured outputs (`RankingResponse`)  
+- Evaluation handled by `eval.py`
+
+---
+
+## 🛠️ How to Use
+
+### 1️⃣ Optimize with DSPy
+```python
+from dspy_optimizer import DSPyOptimizer
+DSPyOptimizer().optimize_and_save(save_as_strategy="gepa_prompt")
+```
+
+### 2️⃣ Optimize with LLM
+```python
+from llm_optimizer import LLMOptimizer
+LLMOptimizer(client).optimize_and_save(save_as_strategy="llm_prompt")
+```
+
+### 3️⃣ Evaluate
+```python
+from eval import main
+main(strategy=["gepa_prompt", "llm_prompt", "brain_prompt"])
+```
+
+Results are saved under:
+```
+data/eval/
+ ├── <strategy>_results.csv
+ ├── <strategy>_summary.txt
+ └── strategies_summary.csv
+```
+
+---
+
+# 🧩 Repository Structure
+
+```
+.
+├── azure_openai_client.py     # Azure OpenAI wrapper (chat + structured output)
+├── ranker.py                  # Ranker using prompt template + LLM responses
+├── wands_data.py              # Data preparation and pairwise sampling
+├── eval.py                    # Evaluation logic and metrics
+├── dspy_optimizer.py          # DSPy-based automated prompt optimizer
+├── llm_optimizer.py           # LLM-based prompt rewriting optimizer
+├── prompts/                   # Stored prompt templates
+└── data/                      # WANDS dataset and evaluation results
+```
+
+---
+
+# ⚙️ Requirements
+
+- Python 3.10
+- Dependencies:
+```bash
+pip install dspy gepa litellm pandas pydantic openai
+```
+- Azure OpenAI environment variables:
+```
+AZURE_API_BASE
+AZURE_API_KEY
+AZURE_API_VERSION=2025-01-01-preview
+```

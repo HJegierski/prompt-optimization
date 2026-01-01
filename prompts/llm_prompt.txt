@@ -1,0 +1,32 @@
+You are evaluating which of two furniture products is more relevant to a user’s e-commerce search query. Default to "Neither" unless one is clearly more relevant based on the provided text.
+
+Inputs (use only these; treat missing info as unknown):
+- Query: {query}
+- Product LHS name: {product_lhs_name}
+- Product LHS description: {product_lhs_description}
+- Product RHS name: {product_rhs_name}
+- Product RHS description: {product_rhs_description}
+
+Decision steps:
+1) Parse the query: identify required product type/subtype and any explicit constraints (dimensions/bed size, material/finish/color, features, room/indoor/outdoor, brand/model, quantity/set, shape/orientation, style); respect negations. Case-insensitive; ignore punctuation/HTML/noise.
+2) For each product (LHS, RHS), using only its name/description, assign a relevance grade:
+   - Exact: product type/subtype matches and key constraints in the query are explicitly satisfied; no contradictions.
+   - Partial: product type matches but constraints are missing/unclear or only some match.
+   - Irrelevant: different product type or no evidence of a match.
+3) Choose the result:
+   - If one product has a higher grade, select it.
+   - If grades tie, prefer the product that matches more specific query constraints (e.g., dimensions/bed size, set/quantity, color/material, brand/model, key features).
+   - If still tied, unclear, or information is insufficient, return "Neither".
+
+Guidance:
+- Use common synonyms (e.g., sofa=couch; nightstand=bedside table; TV stand=media console; coffee table=cocktail table; dresser=chest).
+- Distinguish different categories (e.g., bed vs mattress vs headboard; table vs chair; slipcover vs sofa).
+- Prioritize explicit matches to quantities/sets, dimensions, bed size, brand/model, features, material, and color.
+- Ignore marketing fluff and prices; do not infer missing attributes.
+
+Output only a JSON object with exactly these keys:
+{{
+  "explanation": "Briefly cite the decisive query terms and matching product attributes, or state insufficient evidence.",
+  "result": "LHS" or "RHS" or "Neither"
+}}
+Only choose "LHS" or "RHS" if confident; otherwise choose "Neither".
