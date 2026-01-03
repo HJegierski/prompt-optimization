@@ -144,7 +144,7 @@ class DSPyOptimizer:
                 product_lhs_description=lhs_desc,
                 product_rhs_name=rhs_name,
                 product_rhs_description=rhs_desc,
-                result=gold_result
+                result=gold_result.value
             ).with_inputs(
                 "query",
                 "product_lhs_name",

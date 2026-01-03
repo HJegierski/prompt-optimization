@@ -1,128 +1,148 @@
+"""Evaluation loop and metrics for prompt ranking strategies."""
+
 import os
-import pandas as pd
-from ranker import Ranker
-from azure_openai_client import AzureOpenAIClient
-from wands_data import pairwise_df, train_test_split
+from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
+
+import pandas as pd
+
+from azure_openai_client import AzureOpenAIClient
+from models import Preference, Product
+from ranker import Ranker
+from wands_data import pairwise_df, train_test_split
+
+PRODUCT_FIELD_MAP = {
+    "id": "product_id",
+    "name": "product_name",
+    "description": "product_description",
+    "class_name": "product_class",
+    "category_hierarchy": "category hierarchy",
+    "grade": "grade",
+}
 
 
-def product_row_to_dict(row):
-    if 'product_name_x' in row:
-        return {
-            'id': row['product_id_x'],
-            'name': row['product_name_x'],
-            'description': row['product_description_x'],
-            'class': row['product_class_x'],
-            'category_hierarchy': row['category hierarchy_x'],
-            'grade': row['grade_x']
-        }
-    elif 'product_name_y' in row:
-        return {
-            'id': row['product_id_y'],
-            'name': row['product_name_y'],
-            'description': row['product_description_y'],
-            'class': row['product_class_y'],
-            'category_hierarchy': row['category hierarchy_y'],
-            'grade': row['grade_y']
-        }
+def build_product(row: pd.Series, side: str) -> Product:
+    if side not in ("x", "y"):
+        raise ValueError(f"side must be 'x' or 'y', got {side}")
+    values = {key: row[f"{column}_{side}"] for key, column in PRODUCT_FIELD_MAP.items()}
+    values["grade"] = int(values["grade"])
+    return Product(**values)
 
 
-def output_row(query, product_lhs, product_rhs, human_preference, agent_preference):
+def output_row(
+    query: str,
+    product_lhs: Product,
+    product_rhs: Product,
+    human_preference: Union[Preference, str],
+    agent_preference: Union[Preference, str],
+) -> Dict[str, object]:
+    human_value = human_preference.value if isinstance(human_preference, Preference) else human_preference
+    agent_value = agent_preference.value if isinstance(agent_preference, Preference) else agent_preference
     return {
         'query': query,
-        'product_name_lhs': product_lhs['name'],
-        'product_description_lhs': product_lhs['description'],
-        'product_id_lhs': product_lhs['id'],
-        'product_class_lhs': product_lhs['class'],
-        'category_hierarchy_lhs': product_lhs['category_hierarchy'],
-        'grade_lhs': product_lhs['grade'],
-        'product_name_rhs': product_rhs['name'],
-        'product_description_rhs': product_rhs['description'],
-        'product_id_rhs': product_rhs['id'],
-        'product_class_rhs': product_rhs['class'],
-        'category_hierarchy_rhs': product_rhs['category_hierarchy'],
-        'grade_rhs': product_rhs['grade'],
-        'human_preference': human_preference,
-        'agent_preference': agent_preference
+        'product_name_lhs': product_lhs.name,
+        'product_description_lhs': product_lhs.description,
+        'product_id_lhs': product_lhs.id,
+        'product_class_lhs': product_lhs.class_name,
+        'category_hierarchy_lhs': product_lhs.category_hierarchy,
+        'grade_lhs': product_lhs.grade,
+        'product_name_rhs': product_rhs.name,
+        'product_description_rhs': product_rhs.description,
+        'product_id_rhs': product_rhs.id,
+        'product_class_rhs': product_rhs.class_name,
+        'category_hierarchy_rhs': product_rhs.category_hierarchy,
+        'grade_rhs': product_rhs.grade,
+        'human_preference': human_value,
+        'agent_preference': agent_value
     }
 
 
-def compare_products(product_lhs, product_rhs):
-    preference = product_lhs['grade'] - product_rhs['grade']
+def _extract_grade(product: Union[Product, Dict[str, int]]) -> int:
+    if isinstance(product, Product):
+        return int(product.grade)
+    return int(product["grade"])
+
+
+def compare_products(product_lhs: Union[Product, Dict[str, int]], product_rhs: Union[Product, Dict[str, int]]) -> Preference:
+    preference = _extract_grade(product_lhs) - _extract_grade(product_rhs)
     if preference > 0:
-        return 'LHS'
+        return Preference.LHS
     elif preference < 0:
-        return 'RHS'
-    else:
-        return 'Neither'
+        return Preference.RHS
+    return Preference.NEITHER
 
 
-def results_df_stats(results_df):
-    total = len(results_df)
-    if total == 0:
+@dataclass(frozen=True)
+class Metrics:
+    total: int
+    same: int
+    different: int
+    no_pref: int
+    agent_has_pref: int
+    overall_agreement: float
+    accuracy_on_human_pref: float
+    coverage: float
+    selective_precision: float
+    selective_recall: float
+
+    def to_dict(self) -> Dict[str, float]:
+        return {
+            "total": self.total,
+            "same": self.same,
+            "different": self.different,
+            "no_pref": self.no_pref,
+            "agent_has_pref": self.agent_has_pref,
+            "overall_agreement": self.overall_agreement,
+            "accuracy_on_human_pref": self.accuracy_on_human_pref,
+            "coverage": self.coverage,
+            "selective_precision": self.selective_precision,
+            "selective_recall": self.selective_recall,
+        }
+
+
+def results_df_stats(results_df: pd.DataFrame) -> None:
+    metrics = compute_metrics(results_df)
+    if metrics.total == 0:
         print("No results yet.")
-        pass
-
-    agent = results_df['agent_preference']
-    human = results_df['human_preference']
-
-    is_agent_neither = agent.eq('Neither')
-    is_human_neither = human.eq('Neither')
-    agent_pref = ~is_agent_neither  # agent predicted LHS/RHS
-    human_pref = ~is_human_neither  # human labeled LHS/RHS
-    agree = agent.eq(human)
-
-    # 1) Overall agreement (includes Neither==Neither)
-    overall_agreement = agree.mean() * 100
-
-    # 2) Accuracy when human has a preference (ignore human==Neither)
-    accuracy_on_human_pref = ((agree & human_pref).sum() / human_pref.sum() * 100) if human_pref.any() else 0.0
-
-    # 3) Coverage: agent predicts LHS/RHS
-    coverage = agent_pref.mean() * 100
-
-    # 4) Selective precision: correct given agent predicted LHS/RHS (and human had a pref)
-    correct_when_agent_pref = (agree & agent_pref & human_pref).sum()
-    selective_precision = (correct_when_agent_pref / agent_pref.sum() * 100) if agent_pref.any() else 0.0
-
-    # 5) Selective recall: correct among human LHS/RHS cases (penalizes agent abstains)
-    selective_recall = (correct_when_agent_pref / human_pref.sum() * 100) if human_pref.any() else 0.0
-
-    same_preference = int(agree.sum())
-    different_preference = int(((agent != human) & agent_pref & human_pref).sum())  # only LHS/RHS disagreements
-    no_preference = int(is_agent_neither.sum())
-
-    print(f"Same Preference: {same_preference}, Different Preference: {different_preference}, No Preference: {no_preference}")
+        return
+    print(f"Same Preference: {metrics.same}, Different Preference: {metrics.different}, No Preference: {metrics.no_pref}")
     print(
-        f"Agree: {overall_agreement:.1f}% | Acc(human-pref): {accuracy_on_human_pref:.1f}% | "
-        f"Coverage: {coverage:.1f}% | SelPrec: {selective_precision:.1f}% | "
-        f"SelRec: {selective_recall:.1f}%"
+        f"Agree: {metrics.overall_agreement:.1f}% | Acc(human-pref): {metrics.accuracy_on_human_pref:.1f}% | "
+        f"Coverage: {metrics.coverage:.1f}% | SelPrec: {metrics.selective_precision:.1f}% | "
+        f"SelRec: {metrics.selective_recall:.1f}%"
     )
 
 
-def has_been_labeled(results_df, query, product_lhs, product_rhs):
+def has_been_labeled(results_df: pd.DataFrame, query: str, product_lhs: Product, product_rhs: Product) -> bool:
     result_exists = (len(results_df) > 0
                      and (results_df[(results_df['query'] == query) &
-                          (results_df['product_id_lhs'] == product_lhs['id']) &
-                          (results_df['product_id_rhs'] == product_rhs['id'])].shape[0] > 0))
+                          (results_df['product_id_lhs'] == product_lhs.id) &
+                          (results_df['product_id_rhs'] == product_rhs.id)].shape[0] > 0))
     return result_exists
 
 
-def results_df_metrics(results_df: pd.DataFrame) -> Dict[str, float]:
+def compute_metrics(results_df: pd.DataFrame) -> Metrics:
     total = len(results_df)
     if total == 0:
-        return dict(
-            total=0, same=0, different=0, no_pref=0, agent_has_pref=0,
-            overall_agreement=0.0, accuracy_on_human_pref=0.0,
-            coverage=0.0, selective_precision=0.0, selective_recall=0.0
+        return Metrics(
+            total=0,
+            same=0,
+            different=0,
+            no_pref=0,
+            agent_has_pref=0,
+            overall_agreement=0.0,
+            accuracy_on_human_pref=0.0,
+            coverage=0.0,
+            selective_precision=0.0,
+            selective_recall=0.0,
         )
 
     agent = results_df['agent_preference']
     human = results_df['human_preference']
 
-    is_agent_neither = agent.eq('Neither')
-    is_human_neither = human.eq('Neither')
+    is_agent_neither = agent.eq(Preference.NEITHER.value)
+    is_human_neither = human.eq(Preference.NEITHER.value)
     agent_pref = ~is_agent_neither
     human_pref = ~is_human_neither
     agree = agent.eq(human)
@@ -139,7 +159,7 @@ def results_df_metrics(results_df: pd.DataFrame) -> Dict[str, float]:
     selective_precision = (correct_when_agent_pref / agent_pref.sum() * 100) if agent_pref.any() else 0.0
     selective_recall = (correct_when_agent_pref / human_pref.sum() * 100) if human_pref.any() else 0.0
 
-    return dict(
+    return Metrics(
         total=total,
         same=same_preference,
         different=different_preference,
@@ -153,6 +173,34 @@ def results_df_metrics(results_df: pd.DataFrame) -> Dict[str, float]:
     )
 
 
+def results_df_metrics(results_df: pd.DataFrame) -> Dict[str, float]:
+    return compute_metrics(results_df).to_dict()
+
+
+def load_prompt(strategy: str) -> str:
+    prompt_path = os.path.join('prompts', f'{strategy}.txt')
+    if not os.path.exists(prompt_path):
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
+    with open(prompt_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+def load_cached_results(pickle_path: str, destroy_cache: bool) -> pd.DataFrame:
+    if destroy_cache and os.path.exists(pickle_path):
+        os.remove(pickle_path)
+    try:
+        return pd.read_pickle(pickle_path)
+    except FileNotFoundError:
+        return pd.DataFrame()
+
+
+def save_results(results_df: pd.DataFrame, pickle_path: str, csv_path: str) -> None:
+    try:
+        results_df.to_csv(csv_path, index=False)
+    except Exception as exc:
+        print(f"Warning: failed to save results ({exc}).")
+
+
 def run_strategy(
         strategy: str,
         sample_size=500,
@@ -164,48 +212,36 @@ def run_strategy(
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
     os.makedirs(output_dir, exist_ok=True)
     combined_df = pairwise_df(sample_size + test_size, seed)
-    train_df, test_df = train_test_split(combined_df, test_size=test_size, seed=seed)
+    _, test_df = train_test_split(combined_df, test_size=test_size, seed=seed)
     df = test_df
-    results_df = pd.DataFrame()
     run_name = strategy.replace(" ", "_")
     pickle_path = os.path.join(output_dir, f'{run_name}.pkl')
     csv_path = os.path.join(output_dir, f'{run_name}_results.csv')
     txt_path = os.path.join(output_dir, f'{run_name}_summary.txt')
 
-    if destroy_cache and os.path.exists(pickle_path):
-        os.remove(pickle_path)
-    try:
-        results_df = pd.read_pickle(pickle_path)
-    except FileNotFoundError:
-        pass
-
-    prompt_path = os.path.join('prompts', f'{strategy}.txt')
-    if not os.path.exists(prompt_path):
-        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        prompt_template = f.read()
+    results_df = load_cached_results(pickle_path, destroy_cache)
+    prompt_template = load_prompt(strategy)
 
     client = AzureOpenAIClient()
     ranker = Ranker(prompt_template=prompt_template, client=client)
 
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         query = row['query_x']
-        product_lhs = product_row_to_dict(row[['product_name_x', 'product_description_x', 'product_class_x',
-                                               'product_id_x', 'category hierarchy_x', 'grade_x']])
-        product_rhs = product_row_to_dict(row[['product_name_y', 'product_description_y', 'product_class_y',
-                                               'product_id_y', 'category hierarchy_y', 'grade_y']])
+        product_lhs = build_product(row, "x")
+        product_rhs = build_product(row, "y")
         if has_been_labeled(results_df, query, product_lhs, product_rhs):
             continue
         ground_truth = compare_products(product_lhs, product_rhs)
-        prediction = ranker.rank(query, product_lhs, product_rhs) or 'Neither'
-        results_df = pd.concat([results_df, pd.DataFrame([output_row(query, product_lhs, product_rhs,
-                                                                     ground_truth, prediction)])],
+        prediction = ranker.rank(query, product_lhs.__dict__, product_rhs.__dict__) or Preference.NEITHER
+        results_df = pd.concat([results_df, pd.DataFrame([output_row(
+            query,
+            product_lhs,
+            product_rhs,
+            ground_truth,
+            prediction
+        )])],
                                ignore_index=True)
-        try:
-            results_df.to_pickle(pickle_path)
-            results_df.to_csv(csv_path, index=False)
-        except Exception:
-            pass
+        save_results(results_df, pickle_path, csv_path)
         if verbose:
             results_df_stats(results_df)
 
