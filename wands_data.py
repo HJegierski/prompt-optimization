@@ -1,8 +1,11 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+SAMPLE_POOL_SIZE = 10_000
 
 
 def _wands_data_merged():
+    """Load WANDS tables and merge into a single labeled dataframe."""
     try:
         products = pd.read_csv('data/WANDS/dataset/product.csv', delimiter='\t')
         queries = pd.read_csv('data/WANDS/dataset/query.csv', delimiter='\t')
@@ -20,10 +23,14 @@ def _wands_data_merged():
 
 
 def pairwise_df(sample_size, seed=42):
+    """
+    Build a pairwise dataset of product comparisons for the same query.
+    sample_size controls the final number of rows returned.
+    """
     labels = _wands_data_merged()
 
-    # Sample n rows
-    labels = labels.sample(10_000, random_state=seed)
+    # Sample a pool to make the pairwise join tractable.
+    labels = labels.sample(SAMPLE_POOL_SIZE, random_state=seed)
 
     # Get pairwise
     pairwise = labels.merge(labels, on='query_id')
@@ -41,6 +48,7 @@ def pairwise_df(sample_size, seed=42):
 
 
 def queries_sample(num_queries=100, num_docs=10, seed=420):
+    """Sample documents for a subset of queries, for quick inspection."""
     np.random.seed(seed)
     labels = _wands_data_merged()
     queries = labels['query'].unique()
@@ -58,6 +66,7 @@ def train_test_split(
         test_size: int,
         seed: int = 42
 ):
+    """Randomly split a dataframe into train and test subsets."""
     rng = np.random.default_rng(seed)
     assert 0 < test_size < len(df), "test_size must be between 1 and len(df)-1"
 
@@ -73,6 +82,7 @@ def pairwise_split(
         test_size: int,
         seed: int = 42
 ):
+    """Convenience wrapper: build pairwise data and split into train/test."""
     pairwise = pairwise_df(sample_size, seed)
     train_df, test_df = train_test_split(pairwise, test_size=test_size, seed=seed)
     return train_df, test_df

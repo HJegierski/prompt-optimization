@@ -1,12 +1,14 @@
-from typing import Any, Dict, Optional, Literal
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel
 
 from azure_openai_client import AzureOpenAIClient
+from models import Preference
 
 
 class RankingResponse(BaseModel):
     explanation: str
-    result: Literal["LHS", "RHS", "Neither"]
+    result: Preference
 
 
 class Ranker:
@@ -35,9 +37,9 @@ class Ranker:
         query: str,
         product_lhs: Dict[str, Any],
         product_rhs: Dict[str, Any],
-    ) -> Optional[Literal["LHS", "RHS", "Neither"]]:
+    ) -> Optional[Preference]:
         """
-        Returns preference string or None.
+        Returns a Preference or None.
         """
         prompt = self._format_prompt(query, product_lhs, product_rhs)
         response = self._client(prompt, response_format=RankingResponse)
