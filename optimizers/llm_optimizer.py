@@ -2,7 +2,7 @@ from typing import Optional, Sequence
 from pydantic import BaseModel, Field
 import os
 
-from azure_openai_client import AzureOpenAIClient
+from llm_client import LLMClient
 
 
 class OptimizedPrompt(BaseModel):
@@ -24,7 +24,7 @@ class LLMOptimizer:
         "Return only JSON matching the response schema."
     )
 
-    def __init__(self, client: AzureOpenAIClient):
+    def __init__(self, client: LLMClient):
         self._client = client
 
     def optimize(

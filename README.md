@@ -83,7 +83,7 @@ data/eval/
 
 ```
 .
-├── azure_openai_client.py     # Azure OpenAI wrapper (chat + structured output)
+├── llm_client.py              # LiteLLM wrapper (chat + structured output)
 ├── ranker.py                  # Ranker using prompt template + LLM responses
 ├── wands_data.py              # Data preparation and pairwise sampling
 ├── eval.py                    # Evaluation logic and metrics
@@ -103,11 +103,10 @@ data/eval/
 ```bash
 pip install dspy gepa litellm pandas pydantic openai
 ```
-- Azure OpenAI environment variables:
+- OpenAI environment variables (LLMClient):
 ```
-AZURE_API_BASE
-AZURE_API_KEY
-AZURE_API_VERSION=2025-01-01-preview
+OPENAI_API_KEY
+OPENAI_API_BASE
 ```
 
 ---

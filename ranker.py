@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
 
-from azure_openai_client import AzureOpenAIClient
+from llm_client import LLMClient
 from models import Preference
 
 
@@ -16,10 +16,10 @@ class Ranker:
     def __init__(
         self,
         prompt_template: str,
-        client: Optional[AzureOpenAIClient] = None,
+        client: Optional[LLMClient] = None,
     ):
         if client is None:
-            raise ValueError("Ranker requires an AzureOpenAIClient instance.")
+            raise ValueError("Ranker requires an LLMClient instance.")
         self.prompt_template = prompt_template
         self._client = client
 

@@ -1,11 +1,11 @@
 import os
 
-from azure_openai_client import AzureOpenAIClient
+from llm_client import LLMClient
 from optimizers import LLMOptimizer, OptimizerConfig, DSPyOptimizer
 
 
 def run_llm_optimizer():
-    client = AzureOpenAIClient(deployment="gpt-5", reasoning_effort="high")
+    client = LLMClient(model="gpt-5", reasoning_effort="high")
     optimizer = LLMOptimizer(client)
 
     seed_prompt_path = "prompts/brain_prompt.txt"

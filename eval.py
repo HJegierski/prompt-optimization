@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Union
 
 import pandas as pd
 
-from azure_openai_client import AzureOpenAIClient
+from llm_client import LLMClient
 from models import Preference, Product
 from ranker import Ranker
 from wands_data import pairwise_df, train_test_split
@@ -222,7 +222,7 @@ def run_strategy(
     results_df = load_cached_results(pickle_path, destroy_cache)
     prompt_template = load_prompt(strategy)
 
-    client = AzureOpenAIClient()
+    client = LLMClient()
     ranker = Ranker(prompt_template=prompt_template, client=client)
 
     for _, row in df.iterrows():
