@@ -101,7 +101,7 @@ data/eval/
 - Python 3.10
 - Dependencies:
 ```bash
-pip install dspy gepa litellm pandas pydantic openai
+pip install dspy gepa litellm pandas pydantic
 ```
 - OpenAI environment variables (LLMClient):
 ```
@@ -115,6 +115,13 @@ OPENAI_API_BASE
 
 - Strategy: the name of a prompt template stored in `prompts/` (e.g., `brain_prompt`)
 - Prompt file: the `.txt` template used by the ranker during evaluation
+
+---
+
+## 💡 Tips
+
+- `LLMClient` is model-agnostic; start with `gpt-5-nano` for quick runs and switch to a larger model if you want higher accuracy.
+- If your provider requires a custom base URL, set `OPENAI_API_BASE` or pass `api_base` to `LLMClient`.
 
 ---
 

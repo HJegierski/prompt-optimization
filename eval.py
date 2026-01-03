@@ -271,6 +271,7 @@ def evaluate_strategies(
         output_dir: str = "data/eval",
         verbose: bool = True
 ) -> pd.DataFrame:
+    os.makedirs(output_dir, exist_ok=True)
     all_metrics = []
     for s in strategies:
         _, m = run_strategy(s, sample_size, test_size, destroy_cache, seed, output_dir, verbose)
@@ -301,6 +302,7 @@ def main(
         output_dir: str = "data/eval",
         verbose: bool = True
 ):
+    os.makedirs(output_dir, exist_ok=True)
     if isinstance(strategy, (list, tuple)):
         return evaluate_strategies(list(strategy), sample_size, test_size, destroy_cache, seed, output_dir, verbose)
     else:
