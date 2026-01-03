@@ -42,13 +42,13 @@ The model decides which product better matches the query - `"LHS"`, `"RHS"`, or 
 
 ### 1️⃣ Optimize with DSPy
 ```python
-from dspy_optimizer import DSPyOptimizer
+from optimizers.dspy_optimizer import DSPyOptimizer
 DSPyOptimizer().optimize_and_save(save_as_strategy="gepa_prompt")
 ```
 
 ### 2️⃣ Optimize with LLM
 ```python
-from llm_optimizer import LLMOptimizer
+from optimizers.llm_optimizer import LLMOptimizer
 LLMOptimizer(client).optimize_and_save(save_as_strategy="llm_prompt")
 ```
 
@@ -56,6 +56,17 @@ LLMOptimizer(client).optimize_and_save(save_as_strategy="llm_prompt")
 ```python
 from eval import main
 main(strategy=["gepa_prompt", "llm_prompt", "brain_prompt"])
+```
+
+### 4️⃣ Quickstart (end-to-end)
+```python
+from optimizers.dspy_optimizer import DSPyOptimizer
+from optimizers.llm_optimizer import LLMOptimizer
+from eval import main
+
+DSPyOptimizer().optimize_and_save(save_as_strategy="gepa_prompt")
+LLMOptimizer(client).optimize_and_save(save_as_strategy="llm_prompt")
+main(strategy=["brain_prompt", "llm_prompt", "gepa_prompt"])
 ```
 
 Results are saved under:
@@ -76,8 +87,9 @@ data/eval/
 ├── ranker.py                  # Ranker using prompt template + LLM responses
 ├── wands_data.py              # Data preparation and pairwise sampling
 ├── eval.py                    # Evaluation logic and metrics
-├── dspy_optimizer.py          # DSPy-based automated prompt optimizer
-├── llm_optimizer.py           # LLM-based prompt rewriting optimizer
+├── optimizers/                # Prompt optimizers
+│   ├── dspy_optimizer.py      # DSPy-based automated prompt optimizer
+│   └── llm_optimizer.py       # LLM-based prompt rewriting optimizer
 ├── prompts/                   # Stored prompt templates
 └── data/                      # WANDS dataset and evaluation results
 ```
@@ -96,4 +108,34 @@ pip install dspy gepa litellm pandas pydantic openai
 AZURE_API_BASE
 AZURE_API_KEY
 AZURE_API_VERSION=2025-01-01-preview
+```
+
+---
+
+## 🧾 Glossary
+
+- Strategy: the name of a prompt template stored in `prompts/` (e.g., `brain_prompt`)
+- Prompt file: the `.txt` template used by the ranker during evaluation
+
+---
+
+## 📦 WANDS Dataset Layout
+
+You can download the dataset from [
+WANDS](https://github.com/wayfair/WANDS/tree/main) repo.
+
+Quick download (CSV files only):
+```bash
+mkdir -p data/WANDS/dataset
+curl -L -o data/WANDS/dataset/product.csv https://raw.githubusercontent.com/wayfair/WANDS/main/dataset/product.csv
+curl -L -o data/WANDS/dataset/query.csv https://raw.githubusercontent.com/wayfair/WANDS/main/dataset/query.csv
+curl -L -o data/WANDS/dataset/label.csv https://raw.githubusercontent.com/wayfair/WANDS/main/dataset/label.csv
+```
+
+Place the downloaded WANDS files here:
+```
+data/WANDS/dataset/
+  product.csv
+  query.csv
+  label.csv
 ```
