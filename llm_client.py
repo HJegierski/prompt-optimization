@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from typing import Any, Optional, Type
 
 from litellm import completion
@@ -64,5 +65,6 @@ class LLMClient:
             if hasattr(response_format, "model_validate"):
                 return response_format.model_validate(data)
             return response_format.parse_obj(data)
-        except Exception:
+        except Exception as exc:
+            print(f"LLMClient error: {exc}", file=sys.stderr)
             return None
