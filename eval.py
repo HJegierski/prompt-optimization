@@ -10,7 +10,7 @@ import pandas as pd
 from llm_client import LLMClient
 from models import Preference, Product
 from ranker import Ranker
-from wands_data import pairwise_df, train_test_split
+from wands_data import pairwise_split
 
 PRODUCT_FIELD_MAP = {
     "id": "product_id",
@@ -196,6 +196,10 @@ def load_cached_results(pickle_path: str, destroy_cache: bool) -> pd.DataFrame:
 
 def save_results(results_df: pd.DataFrame, pickle_path: str, csv_path: str) -> None:
     try:
+        results_df.to_pickle(pickle_path)
+    except Exception as exc:
+        print(f"Warning: failed to save cache ({exc}).")
+    try:
         results_df.to_csv(csv_path, index=False)
     except Exception as exc:
         print(f"Warning: failed to save results ({exc}).")
@@ -211,8 +215,7 @@ def run_strategy(
         verbose: bool = True
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
     os.makedirs(output_dir, exist_ok=True)
-    combined_df = pairwise_df(sample_size + test_size, seed)
-    _, test_df = train_test_split(combined_df, test_size=test_size, seed=seed)
+    _, test_df = pairwise_split(sample_size, test_size=test_size, seed=seed)
     df = test_df
     run_name = strategy.replace(" ", "_")
     pickle_path = os.path.join(output_dir, f'{run_name}.pkl')
@@ -315,6 +318,6 @@ def main(
 if __name__ == "__main__":
     main(
         strategy=["brain_prompt", "llm_prompt", "gepa_prompt"],
-        sample_size=150,
+        sample_size=250,
         test_size=100
     )
