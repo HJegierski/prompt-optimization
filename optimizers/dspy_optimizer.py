@@ -156,13 +156,13 @@ class DSPyOptimizer:
         return examples
 
     def _load_data(self) -> Tuple[List[dspy.Example], List[dspy.Example]]:
-        train_df, val_df = pairwise_split(
+        train_df, _ = pairwise_split(
             sample_size=self.cfg.sample_size,
             test_size=self.cfg.test_size,
             seed=self.cfg.seed
         )
-        n = len(val_df) // 2
-        return self._to_examples(val_df.iloc[:n]), self._to_examples(val_df.iloc[n:])
+        n = len(train_df) // 2
+        return self._to_examples(train_df.iloc[:n]), self._to_examples(train_df.iloc[n:])
 
     @staticmethod
     def _metric(gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name=None, pred_trace=None) -> float | Dict[str, Any]:
@@ -172,13 +172,6 @@ class DSPyOptimizer:
         score = 1.0 if predicted == gold_label else 0.0
 
         return score
-        # feedback = (
-        #     f'Predicted "{predicted}" but gold is "{gold_label}". '
-        #     "Prefer exact category/attribute matches to query; pick Neither if both are irrelevant; "
-        #     "if one partial vs. one irrelevant, select the partial match. "
-        #     "Use concrete product attributes from the input to justify."
-        # )
-        # return {"score": score, "feedback": feedback}
 
     def optimize(self) -> ProductRanker:
         """

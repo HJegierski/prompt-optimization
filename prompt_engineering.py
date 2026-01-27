@@ -44,7 +44,7 @@ def run_dspy_optimizer():
         temperature=1.0,
         max_tokens=16_000,
         sample_size=150,
-        test_size=100,
+        test_size=50,
         auto_budget="light",
         max_metric_calls=None,
     )
@@ -56,5 +56,5 @@ def run_dspy_optimizer():
 
 if __name__ == "__main__":
     run_llm_optimizer()
-    # run_dspy_optimizer()
+    run_dspy_optimizer()
     pass
