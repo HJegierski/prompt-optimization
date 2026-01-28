@@ -19,7 +19,6 @@ class LLMClient:
         max_retries: int = 6,
         reasoning_effort: str | None = None
     ):
-        """Thin wrapper around LiteLLM chat + JSON mode parsing."""
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key not provided via args or OPENAI_API_KEY.")

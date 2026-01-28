@@ -156,14 +156,12 @@ class DSPyOptimizer:
         return examples
 
     def _load_data(self) -> Tuple[List[dspy.Example], List[dspy.Example]]:
-        train_df, _ = pairwise_split(
+        train_df, val_df = pairwise_split(
             sample_size=self.cfg.sample_size,
             test_size=self.cfg.test_size,
             seed=self.cfg.seed
         )
-        n = len(train_df) // 2
-        return self._to_examples(train_df.iloc[:n]), self._to_examples(train_df.iloc[n:])
-
+        return self._to_examples(train_df), self._to_examples(val_df)
     @staticmethod
     def _metric(gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name=None, pred_trace=None) -> float | Dict[str, Any]:
         predicted = (getattr(pred, "result", None) or "").strip()
