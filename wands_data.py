@@ -47,20 +47,6 @@ def pairwise_df(sample_size, seed=42):
     return pairwise.head(sample_size)
 
 
-def queries_sample(num_queries=100, num_docs=10, seed=420):
-    """Sample documents for a subset of queries, for quick inspection."""
-    np.random.seed(seed)
-    labels = _wands_data_merged()
-    queries = labels['query'].unique()
-    queries = np.random.choice(queries, num_queries, replace=False)
-    docs_per_query = labels[labels['query'].isin(queries)]
-    # Shuffle randomly
-    docs_per_query = docs_per_query.sample(frac=1, random_state=seed)
-    # docs_per_query = labels.groupby('query').head(num_docs).reset_index(drop=True)
-    docs_per_query = docs_per_query.groupby('query').head(num_docs).reset_index(drop=True)
-    return docs_per_query
-
-
 def train_test_split(
         df: pd.DataFrame,
         test_size: int,
