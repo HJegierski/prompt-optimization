@@ -19,10 +19,10 @@ class LLMClient:
         max_retries: int = 6,
         reasoning_effort: str | None = None
     ):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or os.getenv("AZURE_API_KEY")
         if not self.api_key:
-            raise ValueError("OpenAI API key not provided via args or OPENAI_API_KEY.")
-        self.api_base = api_base or os.getenv("OPENAI_API_BASE")
+            raise ValueError("Azure API key not provided via args or AZURE_API_KEY.")
+        self.api_base = api_base or os.getenv("AZURE_API_BASE")
         self.model = model
         self.reasoning_effort = reasoning_effort
         self._system_prompt = system_prompt
