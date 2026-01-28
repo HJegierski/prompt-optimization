@@ -41,7 +41,6 @@ def run_dspy_optimizer():
         api_base=os.getenv("AZURE_API_BASE"),
         api_version=os.getenv("AZURE_API_VERSION"),
         save_as_strategy="gepa_prompt",
-        temperature=1.0,
         max_tokens=16_000,
         sample_size=150,
         test_size=50,
