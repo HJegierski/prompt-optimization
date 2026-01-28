@@ -162,6 +162,7 @@ class DSPyOptimizer:
             seed=self.cfg.seed
         )
         return self._to_examples(train_df), self._to_examples(val_df)
+    
     @staticmethod
     def _metric(gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name=None, pred_trace=None) -> float | Dict[str, Any]:
         predicted = (getattr(pred, "result", None) or "").strip()
@@ -227,13 +228,13 @@ Return ONLY valid JSON with exactly these fields:
 </OUTPUT FORMAT>
 """
 
-    def _extract_instruction_text(self, prog: ProductRanker) -> str:
+    def _extract_instruction_text(self, optimized_program: ProductRanker) -> str:
         """
         Best-effort extraction of the optimized instruction for the 'rank' predictor.
         Falls back to the signature docstring if needed.
         """
         try:
-            sig = prog.rank.signature
+            sig = optimized_program.rank.signature
             text = getattr(sig, "instructions", None)
             if isinstance(text, str) and text.strip():
                 return text.strip()
@@ -254,6 +255,6 @@ Return ONLY valid JSON with exactly these fields:
         """
         End-to-end: run GEPA and save the optimized prompt file. Returns the path.
         """
-        prog = self.optimize()
-        instruction_text = self._extract_instruction_text(prog)
+        optimized_program = self.optimize()
+        instruction_text = self._extract_instruction_text(optimized_program)
         return self.save_prompt(instruction_text, directory)
