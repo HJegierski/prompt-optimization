@@ -235,7 +235,7 @@ def run_strategy(
         if has_been_labeled(results_df, query, product_lhs, product_rhs):
             continue
         ground_truth = compare_products(product_lhs, product_rhs)
-        prediction = ranker.rank(query, product_lhs.__dict__, product_rhs.__dict__) or Preference.NEITHER
+        prediction = ranker.rank(query, product_lhs, product_rhs) or Preference.NEITHER
         results_df = pd.concat([results_df, pd.DataFrame([output_row(
             query,
             product_lhs,

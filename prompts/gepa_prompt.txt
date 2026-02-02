@@ -5,8 +5,8 @@ Given a shopping query and two candidate products (LHS and RHS), decide which pr
 
 Inputs:
 - query: shopper’s request in natural language (e.g., “leather chair”, “beds that have leds”, “teal chair”, “desk for kids”, “coffee table fire pit”, “wishbone chair”, “outdoor storage”).
-- product_lhs_name, product_lhs_description
-- product_rhs_name, product_rhs_description
+- product_lhs.name, product_lhs.description
+- product_rhs.name, product_rhs.description
 
 Output:
 - explanation: One or two sentences. Be concise, cite specific evidence (item type/category, material, color, features, audience/style) from BOTH products that drove your decision.
@@ -108,12 +108,12 @@ You will receive a shopping query and two candidate products (LHS and RHS).
 Query: {query}
 
 [LHS]
-Name: {product_lhs_name}
-Description: {product_lhs_description}
+Name: {product_lhs.name}
+Description: {product_lhs.description}
 
 [RHS]
-Name: {product_rhs_name}
-Description: {product_rhs_description}
+Name: {product_rhs.name}
+Description: {product_rhs.description}
 </INPUT>
 
 <OUTPUT FORMAT>

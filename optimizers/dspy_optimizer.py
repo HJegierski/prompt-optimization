@@ -4,9 +4,15 @@ from typing import List, Optional, Tuple, Dict, Any
 
 import dspy
 import pandas as pd
+from pydantic import BaseModel
 
 from wands_data import pairwise_split
 from eval import compare_products
+
+
+class Product(BaseModel):
+    name: str = dspy.InputField(desc="Product name")
+    description: str = dspy.InputField(desc="Product description")
 
 
 class PairwiseRankSignature(dspy.Signature):
@@ -27,10 +33,8 @@ class PairwiseRankSignature(dspy.Signature):
     - Ignore marketing fluff; focus on the core attributes the query implies.
     """
     query: str = dspy.InputField(desc="User search query")
-    product_lhs_name: str = dspy.InputField()
-    product_lhs_description: str = dspy.InputField()
-    product_rhs_name: str = dspy.InputField()
-    product_rhs_description: str = dspy.InputField()
+    product_lhs: Product = dspy.InputField()
+    product_rhs: Product = dspy.InputField()
 
     explanation: str = dspy.OutputField(desc="Short justification")
     result: str = dspy.OutputField(desc='One of "LHS", "RHS", "Neither"')
@@ -48,17 +52,13 @@ class ProductRanker(dspy.Module):
     def forward(
         self,
         query: str,
-        product_lhs_name: str,
-        product_lhs_description: str,
-        product_rhs_name: str,
-        product_rhs_description: str
+        product_lhs: Product,
+        product_rhs: Product,
     ):
         return self.rank(
             query=query,
-            product_lhs_name=product_lhs_name,
-            product_lhs_description=product_lhs_description,
-            product_rhs_name=product_rhs_name,
-            product_rhs_description=product_rhs_description
+            product_lhs=product_lhs,
+            product_rhs=product_rhs,
         )
 
 
@@ -123,34 +123,27 @@ class DSPyOptimizer:
         """
         examples: List[dspy.Example] = []
         for _, row in df.iterrows():
-            query = row["query_x"]
-            lhs_name = row["product_name_x"]
-            lhs_desc = row["product_description_x"]
-            rhs_name = row["product_name_y"]
-            rhs_desc = row["product_description_y"]
 
             gold_result = compare_products(
-                {
-                    "grade": row["grade_x"]
-                },
-                {
-                    "grade": row["grade_y"]
-                }
+                {"grade": row["grade_x"]},
+                {"grade": row["grade_y"]}
             )
 
             ex = dspy.Example(
-                query=query,
-                product_lhs_name=lhs_name,
-                product_lhs_description=lhs_desc,
-                product_rhs_name=rhs_name,
-                product_rhs_description=rhs_desc,
+                query=row["query_x"],
+                product_lhs=Product(
+                    name=row["product_name_x"],
+                    description=row["product_description_x"],
+                ),
+                product_rhs=Product(
+                    name=row["product_name_y"],
+                    description=row["product_description_y"],
+                ),
                 result=gold_result.value
             ).with_inputs(
                 "query",
-                "product_lhs_name",
-                "product_lhs_description",
-                "product_rhs_name",
-                "product_rhs_description",
+                "product_lhs",
+                "product_rhs",
             )
             examples.append(ex)
         return examples
@@ -199,7 +192,8 @@ class DSPyOptimizer:
     def _build_ranker_prompt_from_instruction(self, instruction_text: str) -> str:
         """
         Convert the optimized instruction to your Ranker prompt template with your variables.
-        The Ranker expects placeholders: {query}, {product_lhs_*}, {product_rhs_*}
+        The Ranker expects placeholders: {query}, {product_lhs.name}, {product_lhs.description},
+        {product_rhs.name}, {product_rhs.description}
         and returns a pydantic-parseable JSON with fields matching RankingResponse.
         """
         return f"""\
@@ -211,12 +205,12 @@ You will receive a shopping query and two candidate products (LHS and RHS).
 Query: {{query}}
 
 [LHS]
-Name: {{product_lhs_name}}
-Description: {{product_lhs_description}}
+Name: {{product_lhs.name}}
+Description: {{product_lhs.description}}
 
 [RHS]
-Name: {{product_rhs_name}}
-Description: {{product_rhs_description}}
+Name: {{product_rhs.name}}
+Description: {{product_rhs.description}}
 </INPUT>
 
 <OUTPUT FORMAT>

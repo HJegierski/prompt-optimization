@@ -1,9 +1,9 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel
 
 from llm_client import LLMClient
-from models import Preference
+from models import Preference, Product
 
 
 class RankingResponse(BaseModel):
@@ -23,20 +23,32 @@ class Ranker:
         self.prompt_template = prompt_template
         self._client = client
 
-    def _format_prompt(self, query: str, product_lhs: Dict[str, Any], product_rhs: Dict[str, Any]) -> str:
+    def _coerce_product(self, product: Union[Product, Dict[str, Any]]) -> Product:
+        if isinstance(product, Product):
+            return product
+        return Product(
+            id=str(product.get("id", "")),
+            name=str(product.get("name", "")),
+            description=str(product.get("description", "")),
+            class_name=str(product.get("class_name", "")),
+            category_hierarchy=str(product.get("category_hierarchy", "")),
+            grade=int(product.get("grade", 0) or 0),
+        )
+
+    def _format_prompt(self, query: str, product_lhs: Union[Product, Dict[str, Any]], product_rhs: Union[Product, Dict[str, Any]]) -> str:
+        lhs = self._coerce_product(product_lhs)
+        rhs = self._coerce_product(product_rhs)
         return self.prompt_template.format(
             query=query,
-            product_lhs_name=product_lhs.get("name", ""),
-            product_lhs_description=product_lhs.get("description", ""),
-            product_rhs_name=product_rhs.get("name", ""),
-            product_rhs_description=product_rhs.get("description", ""),
+            product_lhs=lhs,
+            product_rhs=rhs,
         )
 
     def rank(
         self,
         query: str,
-        product_lhs: Dict[str, Any],
-        product_rhs: Dict[str, Any],
+        product_lhs: Union[Product, Dict[str, Any]],
+        product_rhs: Union[Product, Dict[str, Any]],
     ) -> Optional[Preference]:
         """
         Returns a Preference or None.

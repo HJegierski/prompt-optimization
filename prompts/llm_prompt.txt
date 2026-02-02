@@ -2,10 +2,10 @@ You are evaluating which of two furniture products is more relevant to a user’
 
 Inputs (use only these; treat missing info as unknown):
 - Query: {query}
-- Product LHS name: {product_lhs_name}
-- Product LHS description: {product_lhs_description}
-- Product RHS name: {product_rhs_name}
-- Product RHS description: {product_rhs_description}
+- Product LHS name: {product_lhs.name}
+- Product LHS description: {product_lhs.description}
+- Product RHS name: {product_rhs.name}
+- Product RHS description: {product_rhs.description}
 
 Decision steps:
 1) Parse the query: identify required product type/subtype and any explicit constraints (dimensions/bed size, material/finish/color, features, room/indoor/outdoor, brand/model, quantity/set, shape/orientation, style); respect negations. Case-insensitive; ignore punctuation/HTML/noise.

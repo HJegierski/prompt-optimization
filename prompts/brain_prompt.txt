@@ -6,12 +6,12 @@ Which of these product names (if either) is more relevant to the furniture e-com
 
 Query: {query}
 
-Product LHS name: {product_lhs_name}
-Product LHS description: {product_lhs_description}
+Product LHS name: {product_lhs.name}
+Product LHS description: {product_lhs.description}
     (remaining product attributes omited)
 Or
-Product RHS name: {product_rhs_name}
-Product RHS description: {product_rhs_description}
+Product RHS name: {product_rhs.name}
+Product RHS description: {product_rhs.description}
     (remaining product attributes omited)
 Or
 Neither / Need more product attributes
