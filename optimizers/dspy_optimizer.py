@@ -133,11 +133,11 @@ class DSPyOptimizer:
                 query=row["query_x"],
                 product_lhs=Product(
                     name=row["product_name_x"],
-                    description=row["product_description_x"],
+                    description="" if pd.isna(row["product_description_x"]) else row["product_description_x"],
                 ),
                 product_rhs=Product(
                     name=row["product_name_y"],
-                    description=row["product_description_y"],
+                    description="" if pd.isna(row["product_description_y"]) else row["product_description_y"],
                 ),
                 result=gold_result.value
             ).with_inputs(
