@@ -12,9 +12,10 @@ class LLMClient:
     def __init__(
         self,
         *,
-        model: str = "gpt-5-nano",
+        model: str = "azure/gpt-5-nano",
         api_key: str | None = None,
         api_base: str | None = None,
+        api_version: str | None = None,
         system_prompt: str = "",
         max_retries: int = 6,
         reasoning_effort: str | None = None
@@ -23,6 +24,7 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("Azure API key not provided via args or AZURE_API_KEY.")
         self.api_base = api_base or os.getenv("AZURE_API_BASE")
+        self.api_version = api_version or os.getenv("AZURE_API_VERSION")
         self.model = model
         self.reasoning_effort = reasoning_effort
         self._system_prompt = system_prompt
@@ -45,10 +47,12 @@ class LLMClient:
             if self.reasoning_effort:
                 extra_args["reasoning_effort"] = self.reasoning_effort
             if response_format is not None:
-                extra_args["response_format"] = {"type": "json_object"}
+                extra_args["response_format"] = response_format
 
             if self.api_base:
                 extra_args["api_base"] = self.api_base
+            if self.api_version:
+                extra_args["api_version"] = self.api_version
 
             resp = completion(
                 model=self.model,
