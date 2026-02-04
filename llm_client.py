@@ -65,9 +65,7 @@ class LLMClient:
                 return content
 
             data = json.loads(content)
-            if hasattr(response_format, "model_validate"):
-                return response_format.model_validate(data)
-            return response_format.parse_obj(data)
+            return response_format.model_validate(data)
         except Exception as exc:
             print(f"LLMClient error: {exc}", file=sys.stderr)
             return None
