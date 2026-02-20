@@ -79,9 +79,7 @@ Rewrite the prompt. Preserve any variables or placeholders. Provide a very short
             directory: str = "prompts",
             write_notes: bool = False,
     ) -> str:
-        """
-        End-to-end: run LLM-based optimization and save the optimized prompt file. Returns the path.
-        """
+        """ End-to-end: run LLM-based optimization and save the optimized prompt file. Returns the path. """
         result = self.optimize(
             seed_prompt,
             task_context=task_context,

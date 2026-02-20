@@ -41,9 +41,6 @@ class PairwiseRankSignature(dspy.Signature):
 
 
 class ProductRanker(dspy.Module):
-    """
-    Minimal DSPy program: one predictor with an instruction that GEPA will evolve.
-    """
     def __init__(self, name: str = "ranker"):
         super().__init__()
         self.name = name
@@ -118,9 +115,8 @@ class DSPyOptimizer:
         self._valset: List[dspy.Example] = []
 
     def _to_examples(self, df: pd.DataFrame) -> List[dspy.Example]:
-        """
-        Create examples with inputs matching signature and a 'gold' label `result`.
-        """
+        """Create examples with inputs matching signature and a 'gold' label `result`."""
+
         examples: List[dspy.Example] = []
         for _, row in df.iterrows():
 
@@ -157,18 +153,15 @@ class DSPyOptimizer:
         return self._to_examples(train_df), self._to_examples(val_df)
     
     @staticmethod
-    def _metric(gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name=None, pred_trace=None) -> float | Dict[str, Any]:
+    def _metric(gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name=None, pred_trace=None) -> float:
         predicted = (getattr(pred, "result", None) or "").strip()
         gold_label = (getattr(gold, "result", None) or "").strip()
 
-        score = 1.0 if predicted == gold_label else 0.0
-
-        return score
+        return float(predicted == gold_label)
 
     def optimize(self) -> ProductRanker:
-        """
-        Runs GEPA and stores the optimized program.
-        """
+        """Runs GEPA and stores the optimized program."""
+
         if not self._trainset or not self._valset:
             self._trainset, self._valset = self._load_data()
 
@@ -196,6 +189,7 @@ class DSPyOptimizer:
         {product_rhs.name}, {product_rhs.description}
         and returns a pydantic-parseable JSON with fields matching RankingResponse.
         """
+
         return f"""\
 {instruction_text}
 
@@ -223,16 +217,14 @@ Return ONLY valid JSON with exactly these fields:
 """
 
     def _extract_instruction_text(self, optimized_program: ProductRanker) -> str:
-        """
-        Best-effort extraction of the optimized instruction for the 'rank' predictor.
-        Falls back to the signature docstring if needed.
-        """
+        """Extraction of the optimized instruction for the 'rank' predictor."""
+
         try:
             sig = optimized_program.rank.signature
             text = getattr(sig, "instructions", None)
             if isinstance(text, str) and text.strip():
                 return text.strip()
-        except Exception as e:
+        except Exception:
             pass
 
         doc = PairwiseRankSignature.__doc__ or ""
@@ -246,9 +238,7 @@ Return ONLY valid JSON with exactly these fields:
         return out_path
 
     def optimize_and_save(self, directory: str = "prompts") -> str:
-        """
-        End-to-end: run GEPA and save the optimized prompt file. Returns the path.
-        """
+        """End-to-end: run GEPA and save the optimized prompt file. Returns the path."""
         optimized_program = self.optimize()
         instruction_text = self._extract_instruction_text(optimized_program)
         return self.save_prompt(instruction_text, directory)

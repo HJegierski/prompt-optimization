@@ -56,4 +56,3 @@ def run_dspy_optimizer():
 if __name__ == "__main__":
     run_llm_optimizer()
     run_dspy_optimizer()
-    pass
