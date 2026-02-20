@@ -153,5 +153,6 @@ cython_debug/
 .pylintrc
 
 # Project data
-data/eval
+data/eval/
+data/WANDS/
 .codex/
