@@ -1,0 +1,5 @@
+Strategy Evaluation Summary
+
+gepa_prompt:  Overall=81.00% | Acc(human-pref)=81.00% | Coverage=95.00% | SelPrec=85.26% | SelRec=81.00% | Same=81 Diff=14 NoPref=5  Total=100
+llm_prompt:   Overall=71.00% | Acc(human-pref)=71.00% | Coverage=76.00% | SelPrec=93.42% | SelRec=71.00% | Same=71 Diff=5  NoPref=24 Total=100
+brain_prompt: Overall=57.00% | Acc(human-pref)=57.00% | Coverage=64.00% | SelPrec=89.06% | SelRec=57.00% | Same=57 Diff=7  NoPref=36 Total=100
