@@ -6,6 +6,7 @@ from typing import Any, Optional, Type
 from litellm import completion
 from pydantic import BaseModel
 
+from usage_tracker import UsageTracker
 
 class LLMClient:
 
@@ -18,7 +19,8 @@ class LLMClient:
         api_version: str | None = None,
         system_prompt: str = "",
         max_retries: int = 6,
-        reasoning_effort: str | None = None
+        reasoning_effort: str | None = None,
+        usage_tracker: UsageTracker | None = None
     ):
         self.api_key = api_key or os.getenv("AZURE_API_KEY")
         if not self.api_key:
@@ -29,6 +31,23 @@ class LLMClient:
         self.reasoning_effort = reasoning_effort
         self._system_prompt = system_prompt
         self._max_retries = max_retries
+        self._usage_tracker = usage_tracker
+
+        if self._usage_tracker is not None:
+            self._register_cost_callback()
+
+    def _register_cost_callback(self) -> None:
+        import litellm  # local import to avoid side effects on module load
+
+        def _track_cost(kwargs, completion_response, start_time=None, end_time=None):
+            try:
+                self._usage_tracker.record_from_litellm(kwargs, completion_response)
+            except Exception:
+                pass
+
+        existing = list(getattr(litellm, "success_callback", []) or [])
+        existing.append(_track_cost)
+        litellm.success_callback = existing
 
     def __call__(
         self,

@@ -3,11 +3,13 @@ import dataclasses
 from typing import List, Optional, Tuple, Dict, Any
 
 import dspy
+import litellm
 import pandas as pd
 from pydantic import BaseModel
 
 from wands_data import pairwise_split
 from eval import compare_products
+from usage_tracker import UsageTracker
 
 
 class Product(BaseModel):
@@ -83,12 +85,15 @@ class OptimizerConfig:
     seed: int = 42
 
     save_as_strategy: str = "gepa_prompt"
+    track_costs: bool = True
+    cost_report_path: Optional[str] = None
 
 
 class DSPyOptimizer:
 
     def __init__(self, cfg: OptimizerConfig = OptimizerConfig()):
         self.cfg = cfg
+        self.usage_tracker: UsageTracker | None = UsageTracker() if self.cfg.track_costs else None
 
         lm_kwargs = dict(
             model_type="chat",
@@ -102,6 +107,9 @@ class DSPyOptimizer:
         if self.cfg.api_version:
             lm_kwargs["api_version"] = self.cfg.api_version
 
+        if self.usage_tracker is not None:
+            self._register_cost_callback()
+
         task_lm = dspy.LM(self.cfg.task_model, **lm_kwargs)
         reflection_lm = dspy.LM(self.cfg.reflection_model, **lm_kwargs)
 
@@ -113,6 +121,18 @@ class DSPyOptimizer:
         self._optimized_program: Optional[ProductRanker] = None
         self._trainset: List[dspy.Example] = []
         self._valset: List[dspy.Example] = []
+
+    def _register_cost_callback(self) -> None:
+        def _track_cost(kwargs, completion_response, start_time=None, end_time=None):
+            try:
+                if self.usage_tracker is not None:
+                    self.usage_tracker.record_from_litellm(kwargs, completion_response)
+            except Exception:
+                pass
+
+        existing = list(getattr(litellm, "success_callback", []) or [])
+        existing.append(_track_cost)
+        litellm.success_callback = existing
 
     def _to_examples(self, df: pd.DataFrame) -> List[dspy.Example]:
         """Create examples with inputs matching signature and a 'gold' label `result`."""
@@ -237,8 +257,20 @@ Return ONLY valid JSON with exactly these fields:
             f.write(self._build_ranker_prompt_from_instruction(instruction_text))
         return out_path
 
+    def _write_cost_report(self, directory: str) -> None:
+        if self.usage_tracker is None:
+            return
+
+        report_path = self.cfg.cost_report_path
+        if not report_path:
+            report_path = os.path.join(directory, f"{self.cfg.save_as_strategy}_costs.md")
+        self.usage_tracker.write_markdown(report_path)
+
     def optimize_and_save(self, directory: str = "prompts") -> str:
         """End-to-end: run GEPA and save the optimized prompt file. Returns the path."""
         optimized_program = self.optimize()
         instruction_text = self._extract_instruction_text(optimized_program)
-        return self.save_prompt(instruction_text, directory)
+        prompt_path = self.save_prompt(instruction_text, directory)
+        self._write_cost_report(directory)
+
+        return prompt_path

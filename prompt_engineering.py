@@ -2,10 +2,12 @@ import os
 
 from llm_client import LLMClient
 from optimizers import LLMOptimizer, OptimizerConfig, DSPyOptimizer
+from usage_tracker import UsageTracker
 
 
 def run_llm_optimizer():
-    client = LLMClient(model="gpt-5", reasoning_effort="high")
+    usage_tracker = UsageTracker()
+    client = LLMClient(model="gpt-5", reasoning_effort="high", usage_tracker=usage_tracker)
     optimizer = LLMOptimizer(client)
 
     seed_prompt_path = "prompts/brain_prompt.txt"
@@ -30,6 +32,7 @@ Return a JSON object with:
         directory="prompts",
         write_notes=True
     )
+    usage_tracker.write_markdown(os.path.join("prompts", "llm_prompt_costs.md"))
     print("Optimized prompt saved to:", prompt_path)
 
 
@@ -46,6 +49,8 @@ def run_dspy_optimizer():
         test_size=50,
         auto_budget="light",
         max_metric_calls=None,
+        track_costs=True,
+        cost_report_path=os.path.join("prompts", "gepa_prompt_costs.md"),
     )
 
     optimizer = DSPyOptimizer(cfg)
