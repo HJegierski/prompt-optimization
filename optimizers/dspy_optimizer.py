@@ -258,9 +258,6 @@ Return ONLY valid JSON with exactly these fields:
         return out_path
 
     def _write_cost_report(self, directory: str) -> None:
-        if self.usage_tracker is None:
-            return
-
         report_path = self.cfg.cost_report_path
         if not report_path:
             report_path = os.path.join(directory, f"{self.cfg.save_as_strategy}_costs.md")
@@ -271,6 +268,8 @@ Return ONLY valid JSON with exactly these fields:
         optimized_program = self.optimize()
         instruction_text = self._extract_instruction_text(optimized_program)
         prompt_path = self.save_prompt(instruction_text, directory)
-        self._write_cost_report(directory)
+
+        if self.usage_tracker is not None:
+            self._write_cost_report(directory)
 
         return prompt_path
