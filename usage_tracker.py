@@ -72,14 +72,14 @@ class UsageTracker:
 
         for model, totals in sorted(self.by_model.items()):
             lines.append(f"- {model}")
-            lines.append(f"- calls: {totals.calls}")
-            lines.append(f"- prompt_tokens: {totals.prompt_tokens}")
-            lines.append(f"- completion_tokens: {totals.completion_tokens}")
-            lines.append(f"- total_tokens: {totals.total_tokens}")
+            lines.append(f"  - calls: {totals.calls}")
+            lines.append(f"  - prompt_tokens: {totals.prompt_tokens}")
+            lines.append(f"  - completion_tokens: {totals.completion_tokens}")
+            lines.append(f"  - total_tokens: {totals.total_tokens}")
             if totals.cached_tokens:
-                lines.append(f"- cached_tokens: {totals.cached_tokens}")
+                lines.append(f"  - cached_tokens: {totals.cached_tokens}")
             if totals.reasoning_tokens:
-                lines.append(f"- reasoning_tokens: {totals.reasoning_tokens}")
+                lines.append(f"  - reasoning_tokens: {totals.reasoning_tokens}")
             lines.append("")
 
         return "\n".join(lines).rstrip() + "\n"
